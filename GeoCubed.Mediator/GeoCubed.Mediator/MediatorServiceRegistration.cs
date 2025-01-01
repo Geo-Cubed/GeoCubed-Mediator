@@ -21,20 +21,21 @@ public static class MediatorServiceRegistration
     /// Registers the mediator services and adds the current assembly to the mediator.
     /// </summary>
     /// <param name="services">The service collection to use.</param>
+    /// <param name="assemblyToUse">The assembly to check</param>
     /// <returns>The service collection passed in <paramref name="services"/>.</returns>
-    public static IServiceCollection AddMediator(this IServiceCollection services)
+    public static IServiceCollection AddMediator(this IServiceCollection services, Assembly? assemblyToUse = null)
     {
         // Add mediator service if it doesn't already exist.
         services.TryAddTransient<IMediator, Mediator>();
 
         // Add the assembly to the list.
-        var assembly = Assembly.GetCallingAssembly();
-        if (!_usedAssemblies.Contains(assembly))
+        assemblyToUse ??= Assembly.GetCallingAssembly();
+        if (!_usedAssemblies.Contains(assemblyToUse))
         {
-            _usedAssemblies.Add(assembly);
+            _usedAssemblies.Add(assemblyToUse);
 
             var requestHandlerType = typeof(IRequestHandler<IRequest<string>, string>);
-            var types = MediatorHelper.GetImplementingTypes(assembly);
+            var types = MediatorHelper.GetImplementingTypes(assemblyToUse);
             foreach (var type in types)
             {
                 // Add the request handlers to the service container.
