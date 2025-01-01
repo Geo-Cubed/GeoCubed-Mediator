@@ -16,16 +16,9 @@ public sealed class Mediator : IMediator
     public Mediator(IServiceProvider provider)
     {
         this._provider = provider;
-        var handlerType = typeof(IRequestHandler<IRequest<string>, string>);
-        var requestType = typeof(IRequest<string>);
-        this._handleMethodName = handlerType?
-            .GetMethods()?
-            .Where(x => 
-                x.ReturnType == typeof(Task<string>)
-                && x.GetParameters().Count() == 1
-                && x.GetParameters().Any(x => x.ParameterType == requestType))
-            .FirstOrDefault()?.Name 
-            ?? string.Empty;
+
+        var handlerType = MediatorHelper.CreateRequestHandlerType();
+        this._handleMethodName = handlerType.GetMethods()[0].Name;
     }
 
     /// <summary>
@@ -34,25 +27,54 @@ public sealed class Mediator : IMediator
     /// <typeparam name="TResponse">The return type of the request.</typeparam>
     /// <param name="request">The request to send.</param>
     /// <returns>The handled response from the <see cref="IRequestHandler{TRequest, TResponse}"/> class.</returns>
-    /// <exception cref="HandlerNotFoundException">Exception thrown if the handler cannot be found.</exception>
+    /// <exception cref="MediatorException">Exception thrown if there are issues with either finding the handler, finding the method on the handler or handling the request.</exception>
     public async Task<TResponse> Send<TResponse>(IRequest<TResponse> request)
     {
-        // TODO: I feel like this could be simplified to make an instance based on the request interface.
-        var genericHandlerType = typeof(IRequestHandler<IRequest<TResponse>, TResponse>);
-        var handler = MediatorHelper.GetHandlerType(genericHandlerType, request.GetType());
-        var instance = handler.InstantiateType(this._provider)
-            ?? throw new HandlerNotFoundException();
-        var method = instance.GetType().GetMethod(this._handleMethodName)
-            ?? throw new HandlerNotFoundException();
+        var genericHandlerType = MediatorHelper.CreateRequestHandlerType(request.GetType(), typeof(TResponse));
 
+        // Get the instance from the service provider.
+        var instance = this._provider.GetService(genericHandlerType);
+        if (instance == null)
+        {
+            var exception = MediatorExceptionBuilder
+                .AnException()
+                .WithMessage(MediatorHelper.ERR_NO_HANDLER(genericHandlerType))
+                .Build();
+
+            throw exception;
+        }
+
+        // Get the method from the instance.
+        var method = instance.GetType().GetMethod(this._handleMethodName);
+        if (method == null)
+        {
+            var exception = MediatorExceptionBuilder
+                .AnException()
+                .WithMessage(MediatorHelper.ERR_NO_METHOD(this._handleMethodName, genericHandlerType))
+                .Build();
+
+            throw exception;
+        }
+
+        // Call the method.
         TResponse response;
         try
         {
             response = (TResponse)await method.InvokeAsync(instance, request);
         }
-        catch (ArgumentException ex)
+        catch (Exception ex)
         {
-            throw new HandlerNotFoundException();
+            var innerException = ex is ArgumentException
+                ? ex
+                : ex.InnerException ?? ex;
+
+            var exception = MediatorExceptionBuilder
+                .AnException()
+                .WithMessage(MediatorHelper.ERR_EXCEPTION_ON_HANDLER(this._handleMethodName, genericHandlerType))
+                .WithInnerException(innerException)
+                .Build();
+
+            throw exception;
         }
 
         return response;

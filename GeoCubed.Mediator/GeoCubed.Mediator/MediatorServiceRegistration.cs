@@ -10,12 +10,7 @@ namespace GeoCubed.Mediator;
 /// </summary>
 public static class MediatorServiceRegistration
 {
-    private static List<Assembly> _usedAssemblies;
-
-    static MediatorServiceRegistration()
-    {
-        _usedAssemblies = new();
-    }
+    private static List<Assembly> _usedAssemblies = new ();
 
     /// <summary>
     /// Registers the mediator services and adds the current assembly to the mediator.
@@ -33,16 +28,17 @@ public static class MediatorServiceRegistration
         if (!_usedAssemblies.Contains(assemblyToUse))
         {
             _usedAssemblies.Add(assemblyToUse);
-
-            var requestHandlerType = typeof(IRequestHandler<IRequest<string>, string>);
-            var types = MediatorHelper.GetImplementingTypes(assemblyToUse);
-            foreach (var type in types)
+                        
+            var assemblyTypes = assemblyToUse.GetTypes();
+            for (int i = 0; i < assemblyTypes.Length; ++i)
             {
-                // Add the request handlers to the service container.
-                var interfaceType = type.GetInterface(requestHandlerType.Name);
-                if (interfaceType != null)
+                var handler = assemblyTypes[i];
+
+                // TODO: Need to create the request handler type for the specific request / response ??? not really sure.
+                var genericHanlder = handler.GetInterface(MediatorHelper.CreateRequestHandlerType().Name);
+                if (genericHanlder != null)
                 {
-                    services.TryAddScoped(interfaceType, type);
+                    services.AddScoped(genericHanlder, handler);
                 }
             }
         }
