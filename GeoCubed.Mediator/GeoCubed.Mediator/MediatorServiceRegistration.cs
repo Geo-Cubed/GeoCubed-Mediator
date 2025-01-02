@@ -34,11 +34,11 @@ public static class MediatorServiceRegistration
             {
                 var handler = assemblyTypes[i];
 
-                // TODO: Need to create the request handler type for the specific request / response ??? not really sure.
+                // If the type implements the request handler then add it to the services.
                 var genericHanlder = handler.GetInterface(MediatorHelper.CreateRequestHandlerType().Name);
                 if (genericHanlder != null)
                 {
-                    services.AddScoped(genericHanlder, handler);
+                    services.TryAddScoped(genericHanlder, handler);
                 }
             }
         }
