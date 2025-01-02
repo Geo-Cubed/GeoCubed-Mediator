@@ -8,5 +8,6 @@ public class Startup
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddMediator(Assembly.GetExecutingAssembly());
+        services.AddScoped<InjectedService>();
     }
 }

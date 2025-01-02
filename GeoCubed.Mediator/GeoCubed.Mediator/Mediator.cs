@@ -38,7 +38,7 @@ public sealed class Mediator : IMediator
         {
             var exception = MediatorExceptionBuilder
                 .AnException()
-                .WithMessage(MediatorHelper.ERR_NO_HANDLER(genericHandlerType))
+                .WithMessage(MediatorHelper.ERR_NO_HANDLER(request.GetType()))
                 .Build();
 
             throw exception;
@@ -50,7 +50,7 @@ public sealed class Mediator : IMediator
         {
             var exception = MediatorExceptionBuilder
                 .AnException()
-                .WithMessage(MediatorHelper.ERR_NO_METHOD(this._handleMethodName, genericHandlerType))
+                .WithMessage(MediatorHelper.ERR_NO_METHOD(this._handleMethodName, instance.GetType()))
                 .Build();
 
             throw exception;
@@ -70,7 +70,7 @@ public sealed class Mediator : IMediator
 
             var exception = MediatorExceptionBuilder
                 .AnException()
-                .WithMessage(MediatorHelper.ERR_EXCEPTION_ON_HANDLER(this._handleMethodName, genericHandlerType))
+                .WithMessage(MediatorHelper.ERR_EXCEPTION_ON_HANDLER(this._handleMethodName, instance.GetType()))
                 .WithInnerException(innerException)
                 .Build();
 
